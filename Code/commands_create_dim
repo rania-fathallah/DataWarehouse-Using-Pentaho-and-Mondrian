@@ -1,0 +1,291 @@
+---- Create Input Tables
+CREATE TABLE input_data_1 (LIKE input_data_2 INCLUDING ALL);
+
+
+
+CREATE TABLE input_data (LIKE input_data_2 INCLUDING ALL);
+ALTER TABLE input_data DROP COLUMN salesabovetarget;
+ALTER TABLE input_data DROP COLUMN orderprofitable;
+
+
+
+
+-- Create Dimension Tables
+CREATE TABLE CustomerDim (
+    customerid SERIAL PRIMARY KEY,
+    customername VARCHAR(255),
+    segment VARCHAR(50),
+    country VARCHAR(100),
+    state VARCHAR(100),
+    city VARCHAR(100),
+    postalcode VARCHAR(20)
+);
+
+CREATE TABLE ProductDim (
+    productid SERIAL PRIMARY KEY,
+    productname VARCHAR(255),
+    category VARCHAR(100),
+    sub_category VARCHAR(100)
+);
+
+CREATE TABLE LocationDim (
+    locationid SERIAL PRIMARY KEY,
+    city VARCHAR(100),
+    state VARCHAR(100),
+    country VARCHAR(100),
+    postalcode VARCHAR(20),
+    latitude DECIMAL(9,6),
+    longitude DECIMAL(9,6),
+    region VARCHAR(100)
+);
+
+CREATE TABLE TimeDim (
+    timeid SERIAL PRIMARY KEY,
+    year INT,
+    month INT,
+    day INT,
+    quarter INT,
+    weekday INT
+);
+
+CREATE TABLE ShipmentDim (
+    shipmentid SERIAL PRIMARY KEY,
+    daystoshipscheduled bigint,
+    shipstatus text,
+    daystoshipactual bigint,
+    shipmode text,
+    shipdate text
+);
+
+-- Populate Dimension Tables
+INSERT INTO public.customerdim (customername, segment, country, state, city, postalcode)
+SELECT DISTINCT
+    customername,
+    segment,
+    country,
+    state,
+    city,
+    postalcode
+FROM public.input_data;
+
+INSERT INTO public.productdim (productname, category, sub_category)
+SELECT DISTINCT
+    productname,
+    category,
+    sub_category
+FROM public.input_data;
+
+INSERT INTO public.locationdim (city, state, country, postalcode, latitude, longitude, region)
+SELECT DISTINCT
+    city,
+    state,
+    country,
+    postalcode,
+    latitude,
+    longitude,
+    region
+FROM public.input_data;
+
+INSERT INTO TimeDim (Year, Month, Day, Quarter, Weekday)
+SELECT DISTINCT
+    DATE_PART('YEAR', CAST(orderdate AS TIMESTAMP)) AS Year,
+    DATE_PART('MONTH', CAST(orderdate AS TIMESTAMP)) AS Month,
+    DATE_PART('DAY', CAST(orderdate AS TIMESTAMP)) AS Day,
+    DATE_PART('QUARTER', CAST(orderdate AS TIMESTAMP)) AS Quarter,
+    EXTRACT(ISODOW FROM CAST(orderdate AS TIMESTAMP)) AS Weekday
+FROM public.input_data;
+
+INSERT INTO public.shipmentdim (daystoshipscheduled, shipstatus, daystoshipactual, shipmode, shipdate)
+SELECT DISTINCT
+    daystoshipscheduled,
+    shipstatus,
+    daystoshipactual,
+    shipmode,
+    shipdate
+FROM public.input_data;
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+Attributes in Dimension Tables:
+
+CustomerDim:
+    CustomerID (PK)
+    CustomerName
+    Segment
+    Country
+    State
+    City
+    PostalCode
+
+ProductDim:
+    ProductID (PK)
+    ProductName
+    Category
+    Sub_Category
+
+LocationDim:
+    LocationID (PK)
+    City
+    State
+    Country
+    PostalCode
+    Latitude
+    Longitude
+    region
+
+TimeDim:
+    Date (PK)
+    Year
+    Month
+    Day
+    Quarter
+    Weekday
+
+ShipmentDim:
+    ShipmentID(PK)
+    daystoshipscheduled
+    shipstatus
+    daystoshipactual
+    shipmode
+    shipdate
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Fact Table :
+    orderid
+    discount
+    profit
+    quantity
+    sales
+    salesforecast
+    salespercustomer
+    profitratio
+
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+CREATE TABLE FactTable (
+    FactID SERIAL PRIMARY KEY,
+    CustomerID INT,
+    ProductID INT,
+    LocationID INT,
+    TimeID INT,
+    ShipmentID INT,
+    OrderID TEXT,
+    Discount DECIMAL,
+    Profit DECIMAL,
+    Quantity INT,
+    Sales DECIMAL,
+    SalesForecast DECIMAL,
+    SalesPerCustomer DECIMAL,
+    ProfitRatio DECIMAL,
+    CONSTRAINT fk_customer FOREIGN KEY (CustomerID) REFERENCES CustomerDim(CustomerID),
+    CONSTRAINT fk_product FOREIGN KEY (ProductID) REFERENCES ProductDim(ProductID),
+    CONSTRAINT fk_location FOREIGN KEY (LocationID) REFERENCES LocationDim(LocationID),
+    CONSTRAINT fk_time FOREIGN KEY (TimeID) REFERENCES timedim(timeid),
+    CONSTRAINT fk_shipment FOREIGN KEY (ShipmentID) REFERENCES ShipmentDim(ShipmentID)
+);
+
+
+
+
+
+
+-- Populate FactTable
+INSERT INTO FactTable (CustomerID, ProductID, LocationID, TimeID, ShipmentID, OrderID, Discount, Profit, Quantity, Sales, SalesForecast, SalesPerCustomer, ProfitRatio)
+SELECT
+    cd.CustomerID,
+    pd.ProductID,
+    ld.LocationID,
+    td.TimeID,
+    sd.ShipmentID,
+    od.OrderID,
+    od.discount,
+    od.profit,
+    od.quantity,
+    od.sales,
+    od.salesforecast,
+    od.salespercustomer,
+    od.profitratio
+FROM
+    public.input_data od
+JOIN
+    public.customerdim cd
+    ON od.customername = cd.customername
+    AND od.segment = cd.segment
+    AND od.country = cd.country
+    AND od.state = cd.state
+    AND od.city = cd.city
+    AND od.postalcode::text = cd.postalcode
+JOIN
+    public.productdim pd
+    ON od.productname = pd.productname
+    AND od.category = pd.category
+    AND od.sub_category = pd.sub_category
+JOIN public.locationdim ld
+    ON od.city = ld.city
+    AND od.state = ld.state
+    AND od.country = ld.country
+    AND od.latitude = ld.latitude
+    AND od.longitude = ld.longitude
+    AND od.region = ld.region
+    AND od.postalcode::text = ld.postalcode
+JOIN public.timedim td
+    ON DATE_PART('YEAR', CAST(od.orderdate AS TIMESTAMP)) = td.year
+    AND DATE_PART('MONTH', CAST(od.orderdate AS TIMESTAMP)) = td.month
+    AND DATE_PART('DAY', CAST(od.orderdate AS TIMESTAMP)) = td.day
+    AND DATE_PART('QUARTER', CAST(od.orderdate AS TIMESTAMP)) = td.quarter
+    AND EXTRACT(ISODOW FROM CAST(od.orderdate AS TIMESTAMP)) = td.weekday
+JOIN public.shipmentdim sd ON od.daystoshipscheduled = sd.daystoshipscheduled
+                           AND od.daystoshipactual = sd.daystoshipactual
+                           AND od.shipstatus = sd.shipstatus
+                           AND od.shipmode = sd.shipmode
+                           AND DATE(od.shipdate) = sd.shipdate::date;
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////
+
+
+$ sed -i 's/United States/US/g' data_1.csv
+$ sed -i 's/Standard Class/SC/g' data_1.csv
+$ sed -i 's/First Class/FC/g' data_1.csv
+$ sed -i 's/Second Class/SecC/g' data_1.csv
+$ sed -i 's/Same Day/SD/g' data_1.csv
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+SELECT
+  [Measures].[Sales] ON COLUMNS,
+  [Product].MEMBERS ON ROWS
+FROM
+  [Orders]
+
+
+
+
+
+
+
+
+
+
+

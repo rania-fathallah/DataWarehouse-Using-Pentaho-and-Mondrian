@@ -1,0 +1,74 @@
+<Schema name="DwProject">
+  <Cube name="DwProject" visible="true" cache="true" enabled="true">
+    <Table name="facttable">
+    </Table>
+    <Dimension type="StandardDimension" visible="true" foreignKey="productid" highCardinality="false" name="Product" description="Product Dimension">
+      <Hierarchy name="product" visible="true" hasAll="true" primaryKey="productid">
+        <Table name="productdim">
+        </Table>
+        <Level name="name" visible="true" column="productname" type="String" uniqueMembers="true" levelType="Regular" hideMemberIf="Never">
+        </Level>
+        <Level name="category" visible="true" column="category" type="String" internalType="String" uniqueMembers="false" levelType="Regular" hideMemberIf="Never">
+        </Level>
+        <Level name="sub-category" visible="true" column="sub_category" type="String" internalType="String" uniqueMembers="false" levelType="Regular" hideMemberIf="Never">
+        </Level>
+      </Hierarchy>
+    </Dimension>
+    <Dimension type="StandardDimension" visible="true" foreignKey="customerid" highCardinality="false" name="Customer">
+      <Hierarchy name="customer" visible="true" hasAll="true" primaryKey="customerid">
+        <Table name="customerdim">
+        </Table>
+        <Level name="name" visible="true" column="customername" type="String" internalType="String" uniqueMembers="true" levelType="Regular" hideMemberIf="Never">
+        </Level>
+      </Hierarchy>
+    </Dimension>
+    <Dimension type="StandardDimension" visible="true" foreignKey="shipmentid" highCardinality="false" name="Shipment">
+      <Hierarchy name="shipment" visible="true" hasAll="true" primaryKey="shipmentid">
+        <Table name="shipmentdim">
+        </Table>
+        <Level name="shipment status" visible="true" column="shipstatus" type="String" internalType="String" uniqueMembers="true" levelType="Regular" hideMemberIf="Never">
+        </Level>
+        <Level name="shipmode" visible="true" column="shipmode" type="String" internalType="String" uniqueMembers="false" levelType="Regular" hideMemberIf="Never">
+        </Level>
+      </Hierarchy>
+    </Dimension>
+    <Dimension type="StandardDimension" visible="true" foreignKey="locationid" highCardinality="false" name="Location">
+      <Hierarchy name="location" visible="true" hasAll="true" primaryKey="locationid">
+        <Table name="locationdim">
+        </Table>
+        <Level name="country" visible="true" column="country" type="String" internalType="String" uniqueMembers="true" levelType="Regular" hideMemberIf="Never">
+        </Level>
+        <Level name="region" visible="true" column="region" type="String" internalType="String" uniqueMembers="false" levelType="Regular" hideMemberIf="Never">
+        </Level>
+      </Hierarchy>
+    </Dimension>
+    <Dimension type="TimeDimension" visible="true" foreignKey="timeid" highCardinality="false" name="Time">
+      <Hierarchy name="TimeF" visible="true" hasAll="true" primaryKey="timeid">
+        <Table name="timedim">
+        </Table>
+        <Level name="year" visible="true" column="year" type="Integer" uniqueMembers="true" levelType="TimeYears" hideMemberIf="Never">
+        </Level>
+        <Level name="month" visible="true" column="month" type="Integer" uniqueMembers="false" levelType="TimeMonths" hideMemberIf="Never">
+        </Level>
+        <Level name="quarter" visible="true" column="quarter" nameColumn="quarter" type="Integer" uniqueMembers="false" levelType="TimeQuarters" hideMemberIf="Never">
+        </Level>
+        <Level name="day" visible="true" column="day" type="Integer" uniqueMembers="false" levelType="TimeDays" hideMemberIf="Never">
+        </Level>
+      </Hierarchy>
+    </Dimension>
+    <Measure name="Profit" column="profit" aggregator="sum" visible="true">
+    </Measure>
+    <Measure name="Discount" column="discount" aggregator="avg" visible="true">
+    </Measure>
+    <Measure name="Quantity" column="quantity" aggregator="sum" visible="true">
+    </Measure>
+    <Measure name="Sales" column="sales" aggregator="sum" visible="true">
+    </Measure>
+    <Measure name="Sales Forecast" column="salesforecast" aggregator="sum" visible="true">
+    </Measure>
+    <CalculatedMember name="Profit Ratio" formula="[Measures].[Profit] / [Measures].[Sales]" dimension="Measures" visible="true">
+    </CalculatedMember>
+    <CalculatedMember name="Sales Forecast Ratio" formula="([Measures].[SalesForecast] - [Measures].[Sales]) / [Measures].[Sales]]" dimension="Measures" visible="true">
+    </CalculatedMember>
+  </Cube>
+</Schema>
